@@ -12,7 +12,7 @@ from fastapi import Depends, UploadFile, HTTPException, File
 @app.get("/files/")
 async def read_files(db: Session = Depends(get_db)):
     files = db.query(FileDO).all()
-    return files
+    return files | []
 
 
 @app.post("/files/")

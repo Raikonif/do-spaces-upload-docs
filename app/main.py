@@ -7,7 +7,14 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 
+from app.database import Base, engine
+from app.routers import file
+
 app = FastAPI()
+
+Base.metadata.create_all(bind=engine)
+
+app.include_router(file.router)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,11 +32,12 @@ s3_client = session.client(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "https://store-all-do.vercel.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 if __name__ == '__main__':
     import uvicorn
