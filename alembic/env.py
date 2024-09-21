@@ -13,7 +13,7 @@ from app.models import FileDO
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_PUBLIC_URL")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 
 # this is the Alembic Config object, which provides
