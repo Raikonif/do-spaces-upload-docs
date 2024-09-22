@@ -10,11 +10,13 @@ router = APIRouter(prefix="/api/files", tags=["files"])
 class FileCreate(BaseModel):
     name: str
     url: str
+    size: float
+    type: str
 
 
 @router.post("/")
 async def create_file(file: FileCreate, db: Session = Depends(get_db)):
-    file = FileDO(name=file.name, url=file.url)
+    file = FileDO(name=file.name, url=file.url, size=file.size, type=file.type)
     db.add(file)
     db.commit()
     db.refresh(file)
