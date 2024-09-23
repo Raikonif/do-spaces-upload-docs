@@ -2,8 +2,7 @@ import logging
 import os
 
 import boto3.session
-from botocore.exceptions import NoCredentialsError
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,10 +10,6 @@ from app.database import Base, engine
 from app.routers import file
 
 app = FastAPI()
-
-Base.metadata.create_all(bind=engine)
-
-app.include_router(file.router)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,6 +33,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+Base.metadata.create_all(bind=engine)
+
+app.include_router(file.router)
 
 if __name__ == '__main__':
     import uvicorn
