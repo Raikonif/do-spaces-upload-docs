@@ -27,13 +27,18 @@ s3_client = session.client(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "https://store-all-do.vercel.app"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 Base.metadata.create_all(bind=engine)
+
+@app.get("/test")
+async def test_route():
+    return {"message": "CORS working"}
+
 
 app.include_router(file.router)
 
