@@ -5,7 +5,7 @@ import boto3.session
 from botocore.exceptions import NoCredentialsError
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
 from app.routers import file
