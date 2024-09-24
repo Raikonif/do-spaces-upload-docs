@@ -32,16 +32,15 @@ async def upload_file(file: UploadFile = File(...)):
 
         filename = file.filename
         s3_client.put_object(
-
-            Bucket=os.getenv("DIGITAL_OCEAN_BUCKET"),
+            Bucket=f"{os.getenv("DIGITAL_OCEAN_FOLDER")}",
             Key=filename,
             Body=file_bytes,
             ACL='public-read',
             ContentType=file.content_type,
         )
-        file_url = f"{os.getenv('DIGITAL_OCEAN_ORIGIN')}/{os.getenv('DIGITAL_OCEAN_BUCKET')}/{filename}"
+        file_url = f"{os.getenv('DIGITAL_OCEAN_ORIGIN')}/{os.getenv("DIGITAL_OCEAN_FOLDER")}/{filename}"
         logger.info(f"File URL: {file_url}")
-        return {"imageUrl": file_url}
+        return {"file_url": file_url}
 
     except NoCredentialsError as e:
         logger.error(f"Credentials not provided or incorrect: {e}")
