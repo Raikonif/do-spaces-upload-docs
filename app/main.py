@@ -25,7 +25,6 @@ s3_client = session.client(
     aws_secret_access_key=os.getenv("DIGITAL_OCEAN_SECRET_KEY")
 )
 
-app.add_middleware(HTTPSRedirectMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,6 +32,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(HTTPSRedirectMiddleware)
 
 
 Base.metadata.create_all(bind=engine)
