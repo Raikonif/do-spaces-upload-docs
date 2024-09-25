@@ -29,7 +29,7 @@ Base.metadata.create_all(bind=engine)
 
 @app.get("/test")
 async def test_route():
-    return f"{os.getenv("DIGITAL_OCEAN_BUCKET")}/{os.getenv("DIGITAL_OCEAN_FOLDER")}"
+    return "cors test"
 
 
 app.include_router(file.router)
