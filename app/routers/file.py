@@ -38,7 +38,7 @@ async def upload_file(file: UploadFile = File(...)):
             ACL='public-read',
             ContentType=file.content_type,
         )
-        file_url = f"{os.getenv('DIGITAL_OCEAN_ORIGIN')}/{os.getenv("DIGITAL_OCEAN_FOLDER")}/{filename}"
+        file_url = f"{os.getenv('DIGITAL_OCEAN_ORIGIN')}/{os.getenv('DIGITAL_OCEAN_FOLDER')}/{filename}"
         logger.info(f"File URL: {file_url}")
         return {"file_url": file_url}
 
