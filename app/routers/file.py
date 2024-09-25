@@ -20,7 +20,7 @@ class FileCreate(BaseModel):
     type: str
 
 
-@router.post("/upload/")
+@router.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     try:
         if file is None:
