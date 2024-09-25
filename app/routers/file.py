@@ -32,7 +32,7 @@ async def upload_file(file: UploadFile = File(...)):
 
         filename = file.filename
         s3_client.put_object(
-            Bucket=f"{os.getenv("DIGITAL_OCEAN_FOLDER")}",
+            Bucket=os.getenv("DIGITAL_OCEAN_FOLDER"),
             Key=filename,
             Body=file_bytes,
             ACL='public-read',
