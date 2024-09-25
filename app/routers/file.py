@@ -46,6 +46,22 @@ async def upload_file(file: UploadFile = File(...)):
         logger.error(f"Credentials not provided or incorrect: {e}")
 
 
+@router.post("/delete/")
+async def delete_file(file_name: str):
+    try:
+        if file_name is None:
+            raise HTTPException(status_code=400, detail="No file name provided")
+
+        s3_client.delete_object(
+            Bucket=os.getenv("DIGITAL_OCEAN_FOLDER"),
+            Key=file_name,
+        )
+        return {"message": f"File {file_name} deleted"}
+
+    except NoCredentialsError as e:
+        logger.error(f"Credentials not provided or incorrect: {e}")
+
+
 @router.post("/")
 async def create_file(file: FileCreate, db: Session = Depends(get_db)):
     file = FileDO(name=file.name, url=file.url, size=file.size, type=file.type)
