@@ -22,7 +22,7 @@ app.add_middleware(
 
 )
 
-# app.add_middleware(HTTPSRedirectMiddleware)
+app.add_middleware(HTTPSRedirectMiddleware)
 
 Base.metadata.create_all(bind=engine)
 
