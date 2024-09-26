@@ -4,8 +4,10 @@ from botocore.exceptions import NoCredentialsError
 from botocore.session import Session
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from pydantic import BaseModel
+from fastapi.responses import FileResponse
 
 from app.database import get_db
+from app.helpers.redirect_path import folder_exists
 from app.helpers.s3_client_do import s3_client
 from app.helpers.logger_config import logger
 from app.models import FileDO
@@ -81,6 +83,18 @@ async def delete_file_data(file_id: int, db: Session = Depends(get_db)):
     db.delete(file)
     db.commit()
     return {"message": "File deleted"}
+
+
+@router.get("/{filename}")
+async def download_file(filename: str):
+    downloads_folder = folder_exists()
+    if filename is None:
+        raise HTTPException(status_code=400, detail="No file name provided")
+    file_path = os.path.join(downloads_folder, filename)
+    folder_name = os.getenv("DIGITAL_OCEAN_FOLDER")
+    s3_client.download_file(folder_name, filename, file_path)
+    logger.info("File downloaded: " + filename)
+    return FileResponse(file_path)
 
 
 @router.get("/")
