@@ -71,6 +71,7 @@ async def create_file(file: FileCreate, db: Session = Depends(get_db)):
     db.add(file)
     db.commit()
     db.refresh(file)
+    logger.info(f"File created: {file}")
     return file
 
 
