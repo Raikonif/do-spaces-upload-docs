@@ -11,3 +11,11 @@ s3_client = session.client(
     aws_access_key_id=os.getenv("DIGITAL_OCEAN_ACCESS_KEY"),
     aws_secret_access_key=os.getenv("DIGITAL_OCEAN_SECRET_KEY")
 )
+
+s3 = session.client(
+    's3',
+    region_name='nyc3',
+    endpoint_url="https://nyc3.digitaloceanspaces.com",
+    aws_access_key_id=os.getenv("DIGITAL_OCEAN_ACCESS_KEY"),
+    aws_secret_access_key=os.getenv("DIGITAL_OCEAN_SECRET_KEY")
+)
