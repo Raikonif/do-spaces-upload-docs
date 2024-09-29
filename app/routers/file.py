@@ -40,15 +40,10 @@ async def get_files(db: Session = Depends(get_db)):
 #     return FileResponse(file_path)
 
 
-@router.get("/list_folders")
+@router.get("/list_obj")
 async def list_folders_do():
-    bucket_name = "ncp-files"
-    folder_prefix = "nandy-files/"
-
-    response = s3.list_objects_v2(Bucket=bucket_name, Prefix=folder_prefix)
-
+    response = s3.list_objects_v2(Bucket=os.getenv("DIGITAL_OCEAN_BUCKET"), Prefix=os.getenv("DIGITAL_OCEAN_FOLDER"))
     print("Objects in the folder:", response)
-    # Print the names of the objects
     for obj in response['Contents']:
         print(obj['Key'])
 
