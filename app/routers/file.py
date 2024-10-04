@@ -1,9 +1,9 @@
 import os
 from sys import prefix
 
-from botocore.exceptions import NoCredentialsError
+from botocore.exceptions import NoCredentialsError, ClientError
 from botocore.session import Session
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 
@@ -28,26 +28,37 @@ async def get_files(db: Session = Depends(get_db)):
     return db.query(FileDO).all()
 
 
-# @router.get("/{filename}")
-# async def download_file(filename: str):
-#     downloads_folder = folder_exists()
-#     if filename is None:
-#         raise HTTPException(status_code=400, detail="No file name provided")
-#     file_path = os.path.join(downloads_folder, filename)
-#     folder_name = os.getenv("DIGITAL_OCEAN_FOLDER")
-#     s3_client.download_file(folder_name, filename, file_path)
-#     logger.info("File downloaded: " + filename)
-#     return FileResponse(file_path)
+@router.get("/download/{filename:path}")
+async def download_file(filename: str):
+    if filename is None:
+        raise HTTPException(status_code=400, detail="No file name provided")
+
+    downloads_folder = folder_exists()
+    file_path = os.path.join(downloads_folder, filename.split("/")[-1])
+    bucket_name = os.getenv("DIGITAL_OCEAN_BUCKET")
+
+    s3.download_file(bucket_name, filename, file_path)
+    logger.info("File downloaded: " + filename)
+
+    return FileResponse(file_path)
 
 
 @router.get("/list_obj")
-async def list_folders_do():
-    response = s3.list_objects_v2(Bucket=os.getenv("DIGITAL_OCEAN_BUCKET"), Prefix=os.getenv("DIGITAL_OCEAN_FOLDER"))
-    print("Objects in the folder:", response)
-    for obj in response['Contents']:
-        print(obj['Key'])
+async def list_folders(prefix_dir: str = os.getenv("DIGITAL_OCEAN_FOLDER") + '/'):
+    response = s3.list_objects_v2(
+        Bucket=os.getenv("DIGITAL_OCEAN_BUCKET"),
+        Prefix=prefix_dir,
+        Delimiter='/'  # Delimiter para listar carpetas y archivos directos
+    )
 
-    return response
+    files = response.get('Contents', [])
+    subfolders = response.get('CommonPrefixes', [])
+
+    actual_files = [f for f in files if not f['Key'].endswith('/')]
+    return {
+        "files": actual_files,
+        "folders": subfolders
+    }
 
 
 @router.post("/")
@@ -62,7 +73,7 @@ async def create_file(file: FileCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), path: str = Form(...)):
     try:
         if file is None:
             raise HTTPException(status_code=400, detail="No file uploaded")
@@ -71,27 +82,36 @@ async def upload_file(file: UploadFile = File(...)):
         if file_bytes is None:
             raise HTTPException(status_code=400, detail="File content is None")
 
-        filename = file.filename
-        s3_client.put_object(
-            Bucket=os.getenv("DIGITAL_OCEAN_FOLDER"),
-            Key=filename,
+        file_route = path + file.filename
+        s3.put_object(
+            Bucket=os.getenv("DIGITAL_OCEAN_BUCKET"),
+            Key=file_route,
             Body=file_bytes,
             ACL='public-read',
             ContentType=file.content_type,
         )
-        file_url = f"{os.getenv('DIGITAL_OCEAN_ORIGIN')}/{os.getenv('DIGITAL_OCEAN_FOLDER')}/{filename}"
-        logger.info(f"File URL: {file_url}")
-        return {"file_url": file_url}
+
+        response = s3.head_object(Bucket=os.getenv("DIGITAL_OCEAN_BUCKET"), Key=file_route)
+
+        metadata = {
+            'Key': file_route,
+            'LastModified': response['LastModified'],
+            'ETag': response['ETag'],
+            'Size': response['ContentLength'],
+            'StorageClass': response.get('StorageClass', 'STANDARD')  # Default to 'STANDARD' if not specified
+        }
+
+        logger.info(f"File: {metadata}")
+        return metadata
 
     except NoCredentialsError as e:
         logger.error(f"Credentials not provided or incorrect: {e}")
 
 
-
-@router.post("/create_folder/{folder}")
-async def create_folder_do(folder: str):
-    s3_client.put_object(
-        Bucket=os.getenv("DIGITAL_OCEAN_FOLDER"),
+@router.post("/create_folder/{folder:path}")
+async def create_folder(folder: str):
+    s3.put_object(
+        Bucket=os.getenv("DIGITAL_OCEAN_BUCKET"),
         Key=f"{folder}/",
         ACL='public-read',
         ContentType="application/json",
@@ -110,26 +130,29 @@ async def delete_file_data(file_id: int, db: Session = Depends(get_db)):
     return {"message": "File deleted"}
 
 
-@router.delete("/remove_file_do/{filename}")
-async def remove_file_do(filename: str):
+@router.delete("/remove_file/{filename:path}")
+async def remove_file(filename: str):
+    bucket_name = os.getenv("DIGITAL_OCEAN_BUCKET")
+    if bucket_name is None:
+        print("El nombre del bucket es None")
+    else:
+        print(f"El nombre del bucket es: {bucket_name}")
+
     try:
-        if filename is None:
-            raise HTTPException(status_code=400, detail="No file name provided")
-
-        s3_client.delete_object(
-            Bucket=os.getenv("DIGITAL_OCEAN_FOLDER"),
-            Key=filename,
-        )
-        return {"message": f"File {filename} deleted"}
-
-    except NoCredentialsError as e:
-        logger.error(f"Credentials not provided or incorrect: {e}")
+        response = s3.delete_object(Bucket=bucket_name, Key=filename)
+        return {"message": "File deleted successfully", "response": response}
+    except Exception as e:
+        print(f"Error deleting file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/delete_folder/{folder}")
-async def delete_folder_do(folder: str):
-    s3_client.delete_object(
-        Bucket=os.getenv("DIGITAL_OCEAN_FOLDER"),
-        Key=f"{folder}/",
-    )
+@router.delete("/remove_folder/{folder:path}")
+async def delete_folder(folder: str):
+    logger.info(f"Deleting folder: {folder}")
+    objects_to_delete = s3.list_objects_v2(Bucket=os.getenv("DIGITAL_OCEAN_BUCKET"), Prefix=folder)
+    if 'Contents' in objects_to_delete:
+        for obj in objects_to_delete['Contents']:
+            print(f"Deleting {obj['Key']}")
+            s3.delete_object(Bucket=os.getenv("DIGITAL_OCEAN_BUCKET"), Key=obj['Key'])
+
     return {"message": f"Folder {folder} deleted"}
