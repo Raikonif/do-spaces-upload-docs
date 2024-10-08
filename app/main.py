@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
-from app.routers import file
+from app.routers import file, authentication, otp
 
 app = FastAPI()
 
@@ -23,6 +23,8 @@ Base.metadata.create_all(bind=engine)
 
 
 app.include_router(file.router)
+# app.include_router(authentication.router)
+# app.include_router(otp.router)
 
 if __name__ == '__main__':
     import uvicorn
