@@ -1,5 +1,4 @@
 import os
-from sys import prefix
 
 from botocore.exceptions import NoCredentialsError, ClientError
 from botocore.session import Session
@@ -8,7 +7,7 @@ from pydantic import BaseModel
 from fastapi.responses import FileResponse
 
 from app.database import get_db
-from app.helpers.redirect_path import folder_exists
+from app.helpers.folder_exists import folder_exists
 from app.helpers.s3_client_do import s3_client, s3
 from app.helpers.logger_config import logger
 from app.models import FileDO
