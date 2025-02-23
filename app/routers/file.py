@@ -42,6 +42,20 @@ async def download_file(filename: str):
     return FileResponse(file_path)
 
 
+@router.get("/download-url/{bucket_name}/{filename:path}")
+async def generate_presigned_url(bucket_name: str, filename: str):
+    try:
+        url = s3.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": bucket_name, "Key": filename},
+            ExpiresIn=3600,
+        )
+        return {"url": url}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/list_obj")
 async def list_folders(prefix_dir: str = os.getenv("DIGITAL_OCEAN_FOLDER") + '/'):
     response = s3.list_objects_v2(
