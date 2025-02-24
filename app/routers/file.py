@@ -39,7 +39,11 @@ async def download_file(filename: str):
     s3.download_file(bucket_name, filename, file_path)
     logger.info("File downloaded: " + filename)
 
-    return FileResponse(file_path)
+    # return FileResponse(file_path)
+    return FileResponse(file_path, media_type="application/octet-stream", headers={
+        "Content-Disposition": f"attachment; filename={filename.split('/')[-1]}"
+    })
+
 
 
 @router.get("/download-url/{bucket_name}/{filename:path}")
