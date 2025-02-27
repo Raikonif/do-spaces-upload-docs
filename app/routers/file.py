@@ -45,13 +45,17 @@ async def download_file(filename: str):
     })
 
 
-
 @router.get("/download-url/{bucket_name}/{filename:path}")
 async def generate_presigned_url(bucket_name: str, filename: str):
     try:
         url = s3.generate_presigned_url(
             "get_object",
-            Params={"Bucket": bucket_name, "Key": filename},
+            Params={
+                "Bucket": bucket_name,
+                "Key": filename,
+                "ResponseContentDisposition": "attachment",
+                "ResponseContentType": "application/octet-stream"
+            },
             ExpiresIn=3600,
         )
         return {"url": url}
