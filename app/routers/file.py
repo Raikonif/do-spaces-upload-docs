@@ -98,7 +98,7 @@ async def upload_file(
     file: UploadFile = File(...),
     path: str = Form(...),
     bucket_name: str | None = Query(default=None),
-    folder: str | None = Query(default=None),
+    folder: str | None = Query(default="slides"),
 ):
     try:
         if file is None:
