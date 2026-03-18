@@ -96,9 +96,9 @@ async def create_file(file: FileCreate, db: Session = Depends(get_db)):
 @router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    path: str = Form(...),
+    path: str | None = Form(default=None),
     bucket_name: str | None = Query(default=None),
-    folder: str | None = Query(default="slides"),
+    folder: str | None = Query(default=None),
 ):
     try:
         if file is None:
@@ -108,12 +108,12 @@ async def upload_file(
         if file_bytes is None:
             raise HTTPException(status_code=400, detail="File content is None")
 
-        resolved_bucket = bucket_name or os.getenv("DIGITAL_OCEAN_BUCKET")
+        resolved_bucket = (bucket_name or "").strip() or os.getenv("DIGITAL_OCEAN_BUCKET")
         if not resolved_bucket:
             raise HTTPException(status_code=500, detail="Bucket name is not configured")
 
-        # Use query folder if provided; otherwise keep using form path.
-        resolved_prefix = folder if folder is not None else path
+        # Priority: query param `folder` -> env `DIGITAL_OCEAN_FOLDER`.
+        resolved_prefix = (folder or "").strip() or (os.getenv("DIGITAL_OCEAN_FOLDER") or "").strip()
         normalized_prefix = (resolved_prefix or "").strip().strip("/")
         file_route = f"{normalized_prefix}/{file.filename}" if normalized_prefix else file.filename
 
