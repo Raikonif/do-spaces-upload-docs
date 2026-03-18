@@ -2,7 +2,7 @@ import os
 
 from botocore.exceptions import NoCredentialsError, ClientError
 from botocore.session import Session
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, Query
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 
@@ -94,7 +94,12 @@ async def create_file(file: FileCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/upload")
-async def upload_file(file: UploadFile = File(...), path: str = Form(...)):
+async def upload_file(
+    file: UploadFile = File(...),
+    path: str = Form(...),
+    bucket_name: str | None = Query(default=None),
+    folder: str | None = Query(default=None),
+):
     try:
         if file is None:
             raise HTTPException(status_code=400, detail="No file uploaded")
@@ -103,16 +108,24 @@ async def upload_file(file: UploadFile = File(...), path: str = Form(...)):
         if file_bytes is None:
             raise HTTPException(status_code=400, detail="File content is None")
 
-        file_route = path + file.filename
+        resolved_bucket = bucket_name or os.getenv("DIGITAL_OCEAN_BUCKET")
+        if not resolved_bucket:
+            raise HTTPException(status_code=500, detail="Bucket name is not configured")
+
+        # Use query folder if provided; otherwise keep using form path.
+        resolved_prefix = folder if folder is not None else path
+        normalized_prefix = (resolved_prefix or "").strip().strip("/")
+        file_route = f"{normalized_prefix}/{file.filename}" if normalized_prefix else file.filename
+
         s3.put_object(
-            Bucket=os.getenv("DIGITAL_OCEAN_BUCKET"),
+            Bucket=resolved_bucket,
             Key=file_route,
             Body=file_bytes,
             ACL='public-read',
             ContentType=file.content_type,
         )
 
-        response = s3.head_object(Bucket=os.getenv("DIGITAL_OCEAN_BUCKET"), Key=file_route)
+        response = s3.head_object(Bucket=resolved_bucket, Key=file_route)
 
         metadata = {
             'Key': file_route,
