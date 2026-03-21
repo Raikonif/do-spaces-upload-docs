@@ -2,7 +2,7 @@ import os
 
 from botocore.exceptions import NoCredentialsError, ClientError
 from botocore.session import Session
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, Query
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 
@@ -96,7 +96,6 @@ async def create_file(file: FileCreate, db: Session = Depends(get_db)):
 @router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    path: str | None = Form(default=None),
     bucket_name: str | None = Query(default=None),
     folder: str | None = Query(default=None),
 ):
@@ -112,10 +111,18 @@ async def upload_file(
         if not resolved_bucket:
             raise HTTPException(status_code=500, detail="Bucket name is not configured")
 
-        # Priority: query param `folder` -> env `DIGITAL_OCEAN_FOLDER`.
-        resolved_prefix = (folder or "").strip() or (os.getenv("DIGITAL_OCEAN_FOLDER") or "").strip()
-        normalized_prefix = (resolved_prefix or "").strip().strip("/")
-        file_route = f"{normalized_prefix}/{file.filename}" if normalized_prefix else file.filename
+        root_prefix = (os.getenv("DIGITAL_OCEAN_FOLDER") or "").strip().strip("/")
+        incoming_prefix = (folder or "").strip().strip("/")
+
+        # Avoid duplicating the root prefix when the incoming prefix already includes it.
+        relative_prefix = incoming_prefix
+        if root_prefix and incoming_prefix == root_prefix:
+            relative_prefix = ""
+        elif root_prefix and incoming_prefix.startswith(f"{root_prefix}/"):
+            relative_prefix = incoming_prefix[len(root_prefix) + 1:]
+
+        key_parts = [part for part in (root_prefix, relative_prefix, file.filename) if part]
+        file_route = "/".join(key_parts)
 
         s3.put_object(
             Bucket=resolved_bucket,
